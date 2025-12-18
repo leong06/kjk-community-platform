@@ -259,17 +259,27 @@ import React, { useEffect, useState } from 'react';
        const [description, setDescription] = useState('');
        const [longDescription, setLongDescription] = useState('');
        const [file, setFile] = useState(null);
-       const [images, setImages] = useState([]);
        const navigate = useNavigate();
 
        const handleUpload = async (e) => {
          e.preventDefault();
+
+         // Client-side validation
+         if (!title || !description) {
+           alert('Please fill in title and description');
+           return;
+         }
+         if (!file) {
+           alert('Please select a .gdz file');
+           return;
+         }
+
          const formData = new FormData();
          formData.append('title', title);
          formData.append('description', description);
          formData.append('long_description', longDescription);
-         if (file) formData.append('file', file);
-         images.forEach((img) => formData.append('images', img));
+         formData.append('file', file);
+
          try {
            await axios.post('http://localhost:5000/api/modules', formData, {
              headers: { 'Content-Type': 'multipart/form-data' },
@@ -278,6 +288,7 @@ import React, { useEffect, useState } from 'react';
            alert('Module uploaded');
            navigate('/');
          } catch (error) {
+           console.error('Upload error:', error);
            alert(error.response?.data?.error || 'Error uploading');
          }
        };
@@ -292,12 +303,14 @@ import React, { useEffect, useState } from 'react';
                value={title}
                onChange={(e) => setTitle(e.target.value)}
                className="w-full p-2 mb-4 border rounded-md dark:bg-gray-700 dark:text-white dark:border-gray-600"
+               required
              />
              <textarea
                placeholder="Short Description"
                value={description}
                onChange={(e) => setDescription(e.target.value)}
                className="w-full p-2 mb-4 border rounded-md dark:bg-gray-700 dark:text-white dark:border-gray-600"
+               required
              />
              <textarea
                placeholder="Long Description"
@@ -305,19 +318,18 @@ import React, { useEffect, useState } from 'react';
                onChange={(e) => setLongDescription(e.target.value)}
                className="w-full p-2 mb-4 border rounded-md dark:bg-gray-700 dark:text-white dark:border-gray-600 h-32"
              />
-             <input
-               type="file"
-               accept=".zip"
-               onChange={(e) => setFile(e.target.files[0])}
-               className="w-full p-2 mb-4"
-             />
-             <input
-               type="file"
-               accept="image/*"
-               multiple
-               onChange={(e) => setImages([...e.target.files])}
-               className="w-full p-2 mb-4"
-             />
+             <div className="mb-4">
+               <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                 Select module:
+               </label>
+               <input
+                 type="file"
+                 accept=".gdz"
+                 onChange={(e) => setFile(e.target.files[0])}
+                 className="w-full p-2"
+                 required
+               />
+             </div>
              <button
                type="submit"
                className="w-full p-2 bg-primary text-white rounded-md hover:bg-blue-700"

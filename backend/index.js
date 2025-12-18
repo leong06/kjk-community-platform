@@ -34,10 +34,10 @@ const express = require('express');
        storage,
        fileFilter: (req, file, cb) => {
          const ext = path.extname(file.originalname).toLowerCase();
-         if (['.zip', '.png', '.jpg', '.jpeg'].includes(ext)) {
+         if (['.gdz', '.png', '.jpg', '.jpeg'].includes(ext)) {
            cb(null, true);
          } else {
-           cb(new Error('Only .zip, .png, .jpg, .jpeg files are allowed'));
+           cb(new Error('Only .gdz, .png, .jpg, .jpeg files are allowed'));
          }
        },
      });
@@ -217,12 +217,20 @@ const express = require('express');
 
      // Upload module
      app.post('/api/modules', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'images', maxCount: 4 }]), async (req, res) => {
+       console.log('Upload request received');
+       console.log('Session user:', req.session.user);
+       console.log('Body:', req.body);
+       console.log('Files:', req.files);
+
        if (!req.session.user) {
          return res.status(401).json({ error: 'Not logged in' });
        }
        const { title, description, long_description } = req.body;
-       if (!title || !description || !req.files.file) {
-         return res.status(400).json({ error: 'Title, description, and .zip file required' });
+       if (!title || !description) {
+         return res.status(400).json({ error: 'Title and description required' });
+       }
+       if (!req.files || !req.files.file) {
+         return res.status(400).json({ error: '.gdz file required' });
        }
        const file_path = `/uploads/${req.files.file[0].filename}`;
        try {
@@ -241,10 +249,11 @@ const express = require('express');
            }
          }
          await connection.end();
+         console.log('Module uploaded successfully');
          res.json({ message: 'Module uploaded' });
        } catch (error) {
          console.error('Upload error:', error);
-         res.status(500).json({ error: 'Server error' });
+         res.status(500).json({ error: 'Server error: ' + error.message });
        }
      });
 
@@ -291,10 +300,15 @@ const express = require('express');
            return res.status(400).json({ error: 'Invalid file path' });
          }
          const fileName = path.basename(relativePath);
-         const filePath = path.join(__dirname, 'Uploads', fileName);
+         const filePath = path.join(__dirname, 'uploads', fileName);
          if (!fs.existsSync(filePath)) {
            return res.status(404).json({ error: 'File not found on server' });
          }
+
+         // Set headers to force .gdz extension
+         res.setHeader('Content-Type', 'application/octet-stream');
+         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
          res.download(filePath, fileName, (err) => {
            if (err) {
              console.error('Download error:', err);
