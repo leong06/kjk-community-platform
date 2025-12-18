@@ -5,6 +5,7 @@ const express = require('express');
      const multer = require('multer');
      const path = require('path');
      const fs = require('fs');
+     const bcrypt = require('bcrypt');
      require('dotenv').config();
 
      const app = express();
@@ -59,9 +60,10 @@ const express = require('express');
        }
        try {
          const connection = await getDBConnection();
+         const hashedPassword = await bcrypt.hash(password, 10);
          await connection.execute(
            'INSERT INTO users (username, password) VALUES (?, ?)',
-           [username, password]
+           [username, hashedPassword]
          );
          await connection.end();
          res.json({ message: 'User registered' });
@@ -80,11 +82,15 @@ const express = require('express');
        try {
          const connection = await getDBConnection();
          const [rows] = await connection.execute(
-           'SELECT * FROM users WHERE username = ? AND password = ?',
-           [username, password]
+           'SELECT * FROM users WHERE username = ?',
+           [username]
          );
          await connection.end();
          if (rows.length === 0) {
+           return res.status(401).json({ error: 'Invalid credentials' });
+         }
+         const isValidPassword = await bcrypt.compare(password, rows[0].password);
+         if (!isValidPassword) {
            return res.status(401).json({ error: 'Invalid credentials' });
          }
          req.session.user = { id: rows[0].id, username: rows[0].username };
@@ -163,13 +169,19 @@ const express = require('express');
            'SELECT password FROM users WHERE id = ?',
            [req.session.user.id]
          );
-         if (rows.length === 0 || rows[0].password !== currentPassword) {
+         if (rows.length === 0) {
            await connection.end();
            return res.status(401).json({ error: 'Invalid current password' });
          }
+         const isValidPassword = await bcrypt.compare(currentPassword, rows[0].password);
+         if (!isValidPassword) {
+           await connection.end();
+           return res.status(401).json({ error: 'Invalid current password' });
+         }
+         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
          await connection.execute(
            'UPDATE users SET password = ? WHERE id = ?',
-           [newPassword, req.session.user.id]
+           [hashedNewPassword, req.session.user.id]
          );
          await connection.end();
          res.json({ message: 'Password changed' });
@@ -294,6 +306,56 @@ const express = require('express');
        } catch (error) {
          console.error('Download endpoint error:', error);
          if (!res.headersSent) {
+           res.status(500).json({ error: 'Server error' });
+         }
+       }
+     });
+
+     // Get reviews for a module
+     app.get('/api/modules/:moduleId/reviews', async (req, res) => {
+       try {
+         const connection = await getDBConnection();
+         const [reviews] = await connection.execute(
+           `SELECT r.*, u.username, u.profile_picture
+            FROM reviews r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.module_id = ?
+            ORDER BY r.created_at DESC`,
+           [req.params.moduleId]
+         );
+         await connection.end();
+         res.json(reviews);
+       } catch (error) {
+         console.error('Get reviews error:', error);
+         res.status(500).json({ error: 'Server error' });
+       }
+     });
+
+     // Submit a review
+     app.post('/api/reviews', async (req, res) => {
+       if (!req.session.user) {
+         return res.status(401).json({ error: 'Not logged in' });
+       }
+       const { module_id, rating, review_text } = req.body;
+       if (!module_id || !rating) {
+         return res.status(400).json({ error: 'Module ID and rating required' });
+       }
+       if (rating < 0.5 || rating > 5) {
+         return res.status(400).json({ error: 'Rating must be between 0.5 and 5' });
+       }
+       try {
+         const connection = await getDBConnection();
+         await connection.execute(
+           'INSERT INTO reviews (module_id, user_id, rating, review_text) VALUES (?, ?, ?, ?)',
+           [module_id, req.session.user.id, rating, review_text || '']
+         );
+         await connection.end();
+         res.json({ message: 'Review submitted' });
+       } catch (error) {
+         if (error.code === 'ER_DUP_ENTRY') {
+           res.status(400).json({ error: 'You have already reviewed this module' });
+         } else {
+           console.error('Submit review error:', error);
            res.status(500).json({ error: 'Server error' });
          }
        }

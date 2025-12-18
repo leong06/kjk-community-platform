@@ -65,7 +65,7 @@ import React, { useEffect, useState } from 'react';
        return (
          <div className="flex-1">
            <nav className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow-md">
-             <h1 className="text-2xl font-bold text-primary dark:text-blue-400">Kaland Játék Kockázat</h1>
+             <h1 className="text-2xl font-bold text-primary dark:text-blue-400">Közösségi platform</h1>
              <div className="relative">
                <button
                  onClick={() => setMenuOpen(!menuOpen)}
@@ -364,7 +364,7 @@ import React, { useEffect, useState } from 'react';
        return (
          <div className="flex-1">
            <nav className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow-md">
-             <h1 className="text-2xl font-bold text-primary dark:text-blue-400">Kaland Játék Kockázat</h1>
+             <h1 className="text-2xl font-bold text-primary dark:text-blue-400">Közösségi platform</h1>
              <div className="relative">
                <button
                  onClick={() => setMenuOpen(!menuOpen)}
@@ -565,6 +565,9 @@ import React, { useEffect, useState } from 'react';
      function ModuleDetails({ darkMode, setDarkMode }) {
        const { id } = useParams();
        const [module, setModule] = useState(null);
+       const [reviews, setReviews] = useState([]);
+       const [newReview, setNewReview] = useState({ rating: 5, review_text: '' });
+       const [user, setUser] = useState(null);
        const navigate = useNavigate();
 
        useEffect(() => {
@@ -575,7 +578,39 @@ import React, { useEffect, useState } from 'react';
              alert('Module not found');
              navigate('/');
            });
+
+         axios
+           .get(`http://localhost:5000/api/modules/${id}/reviews`)
+           .then((response) => setReviews(response.data))
+           .catch((error) => console.error('Error fetching reviews:', error));
+
+         axios
+           .get('http://localhost:5000/api/user', { withCredentials: true })
+           .then((response) => setUser(response.data.user))
+           .catch((error) => console.error('Error fetching user:', error));
        }, [id, navigate]);
+
+       const handleSubmitReview = (e) => {
+         e.preventDefault();
+         axios
+           .post(
+             'http://localhost:5000/api/reviews',
+             { module_id: id, rating: newReview.rating, review_text: newReview.review_text },
+             { withCredentials: true }
+           )
+           .then(() => {
+             alert('Review submitted successfully!');
+             setNewReview({ rating: 5, review_text: '' });
+             axios
+               .get(`http://localhost:5000/api/modules/${id}/reviews`)
+               .then((response) => setReviews(response.data));
+           })
+           .catch((error) => alert(error.response?.data?.error || 'Error submitting review'));
+       };
+
+       const averageRating = reviews.length > 0
+         ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+         : 'No ratings yet';
 
        if (!module) return <div className="text-center p-4 dark:text-white">Loading...</div>;
 
@@ -623,6 +658,96 @@ import React, { useEffect, useState } from 'react';
                </div>
              )}
            </div>
+
+           {/* Reviews Section */}
+           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mt-6">
+             <h3 className="text-xl font-semibold dark:text-gray-200 mb-4">
+               Reviews ({reviews.length})
+               {reviews.length > 0 && (
+                 <span className="text-yellow-500 ml-2">★ {averageRating}</span>
+               )}
+             </h3>
+
+             {/* Review Submission Form */}
+             {user ? (
+               <form onSubmit={handleSubmitReview} className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                 <h4 className="font-semibold dark:text-gray-200 mb-2">Write a Review</h4>
+                 <div className="mb-3">
+                   <label className="block text-sm font-medium dark:text-gray-300 mb-1">
+                     Rating: {newReview.rating} / 5
+                   </label>
+                   <input
+                     type="range"
+                     min="0.5"
+                     max="5"
+                     step="0.5"
+                     value={newReview.rating}
+                     onChange={(e) => setNewReview({ ...newReview, rating: parseFloat(e.target.value) })}
+                     className="w-full"
+                   />
+                   <div className="text-yellow-500 text-2xl">
+                     {'★'.repeat(Math.floor(newReview.rating))}
+                     {newReview.rating % 1 !== 0 && '☆'}
+                   </div>
+                 </div>
+                 <textarea
+                   placeholder="Write your review here (optional)"
+                   value={newReview.review_text}
+                   onChange={(e) => setNewReview({ ...newReview, review_text: e.target.value })}
+                   className="w-full p-2 border rounded-md dark:bg-gray-600 dark:text-white dark:border-gray-500"
+                   rows="3"
+                 />
+                 <button
+                   type="submit"
+                   className="mt-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-700"
+                 >
+                   Submit Review
+                 </button>
+               </form>
+             ) : (
+               <p className="mb-4 text-gray-600 dark:text-gray-400">
+                 Please log in to write a review.
+               </p>
+             )}
+
+             {/* Display Reviews */}
+             <div className="space-y-4">
+               {reviews.length > 0 ? (
+                 reviews.map((review) => (
+                   <div key={review.id} className="border-b dark:border-gray-700 pb-4">
+                     <div className="flex items-center mb-2">
+                       {review.profile_picture && (
+                         <img
+                           src={`http://localhost:5000${review.profile_picture}`}
+                           alt={review.username}
+                           className="w-10 h-10 rounded-full mr-3"
+                         />
+                       )}
+                       <div>
+                         <p className="font-semibold dark:text-gray-200">{review.username}</p>
+                         <div className="text-yellow-500">
+                           {'★'.repeat(Math.floor(review.rating))}
+                           {review.rating % 1 !== 0 && '☆'}
+                           <span className="text-gray-600 dark:text-gray-400 ml-2">
+                             {review.rating} / 5
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                     {review.review_text && (
+                       <p className="text-gray-700 dark:text-gray-300 ml-13">{review.review_text}</p>
+                     )}
+                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                       {new Date(review.created_at).toLocaleDateString()}
+                     </p>
+                   </div>
+                 ))
+               ) : (
+                 <p className="text-gray-600 dark:text-gray-400">No reviews yet. Be the first to review!</p>
+               )}
+             </div>
+           </div>
+
            <Footer darkMode={darkMode} setDarkMode={setDarkMode} />
          </div>
        );
@@ -632,7 +757,7 @@ import React, { useEffect, useState } from 'react';
        return (
          <footer className="bg-white dark:bg-gray-800 p-4 mt-6 shadow-inner">
            <div className="container mx-auto flex justify-between items-center">
-             <p className="text-gray-600 dark:text-gray-300">© 2025 Kaland Játék Kockázat</p>
+             <p className="text-gray-600 dark:text-gray-300">Kalandjáték motor</p>
              <button
                onClick={() => setDarkMode(!darkMode)}
                className="p-2 bg-primary text-white rounded-md hover:bg-blue-700"
