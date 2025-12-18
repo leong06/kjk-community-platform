@@ -1,70 +1,124 @@
-# Getting Started with Create React App
+# Kalandjáték motor - Közösségi platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Egy közösségi platform kalandjáték modulok megosztására, letöltésére és értékelésére.
 
-## Available Scripts
+## Funkciók
 
-In the project directory, you can run:
+- **Felhasználói rendszer**: Regisztráció, bejelentkezés, profil szerkesztés
+- **Modul feltöltés**: Kalandjáték modulok feltöltése leírással és képekkel
+- **Modul böngészés**: Összes feltöltött modul megtekintése
+- **Értékelési rendszer**: Modulok értékelése 0.5-5 csillaggal és szöveges véleménnyel
+- **Letöltés**: Modulok .zip fájlként történő letöltése
+- **Sötét mód**: Teljes dark mode támogatás
+- **Biztonság**: Bcrypt alapú jelszó titkosítás
 
-### `npm start`
+## Technológiák
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Frontend
+- React
+- Tailwind CSS
+- Axios
+- React Router
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Backend
+- Node.js
+- Express
+- MySQL
+- Bcrypt (jelszó titkosítás)
+- Multer (fájl feltöltés)
 
-### `npm test`
+## Telepítés
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Előfeltételek
+- Node.js
+- MySQL szerver
 
-### `npm run build`
+### Lépések
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. **Repository klónozása**
+```bash
+git clone <repository-url>
+cd kjk-community-platform
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. **Backend telepítése**
+```bash
+cd backend
+npm install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. **Adatbázis beállítása**
 
-### `npm run eject`
+Hozz létre egy `.env` fájlt a `backend` mappában:
+```
+DB_HOST=localhost
+DB_USER=kjk_user
+DB_PASSWORD=password
+DB_NAME=kaland_jatek_kockazat
+PORT=5000
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Importáld az adatbázis sémát:
+```bash
+mysql -u root -p < init.sql
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4. **Frontend telepítése**
+```bash
+cd ..
+npm install
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Indítás
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Backend indítása
+```bash
+cd backend
+node index.js
+```
+A szerver elindul a `http://localhost:5000` címen.
 
-## Learn More
+### Frontend indítása
+```bash
+npm start
+```
+Az alkalmazás megnyílik a `http://localhost:3000` címen.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## API Végpontok
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Felhasználó kezelés
+- `POST /api/register` - Új felhasználó regisztrálása
+- `POST /api/login` - Bejelentkezés
+- `POST /api/logout` - Kijelentkezés
+- `GET /api/user` - Aktuális felhasználó lekérése
+- `POST /api/user/update` - Profil frissítése
+- `POST /api/user/change-password` - Jelszó módosítása
+- `GET /api/users/:username` - Felhasználói profil és modulok
 
-### Code Splitting
+### Modulok
+- `GET /api/modules` - Összes modul listázása
+- `GET /api/modules/:id` - Egy modul részletes adatai
+- `POST /api/modules` - Új modul feltöltése
+- `GET /api/modules/:id/download` - Modul letöltése
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Értékelések
+- `GET /api/modules/:moduleId/reviews` - Modul értékelései
+- `POST /api/reviews` - Új értékelés beküldése
 
-### Analyzing the Bundle Size
+## Adatbázis struktúra
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- **users** - Felhasználói adatok (titkosított jelszóval)
+- **modules** - Kalandjáték modulok
+- **reviews** - Modul értékelések (0.5-5 csillag + szöveg)
+- **images** - Modul képek
 
-### Making a Progressive Web App
+## Biztonság
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- Jelszavak bcrypt titkosítással tárolva (10 salt rounds)
+- Session-alapú hitelesítés
+- SQL injection védelem prepared statements használatával
+- Fájl feltöltés típus ellenőrzéssel (.zip, .png, .jpg, .jpeg)
 
-### Advanced Configuration
+## Licenc
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Ez a projekt oktatási célra készült.
